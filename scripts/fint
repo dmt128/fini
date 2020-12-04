@@ -1,0 +1,19 @@
+#!python
+import os, argparse
+import fini
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Get definition on financial terms")
+    parser.add_argument("--version", action="version", version='Fint 0.1.0')
+    parser.add_argument("-v", "--verbose", action="store_true", default=False,
+        help="display verbose information during processing")
+
+    parser.add_argument('finterm', metavar='FinTerm', type=str, nargs='+',
+                    help='Get information on particular term(s)')
+
+    # Parse user inputs
+    args = parser.parse_args()
+
+    if args.finterm:
+        for term in list(set(args.finterm)):
+            fini.termdef.info(term)

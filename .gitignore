@@ -1,0 +1,13 @@
+.DS_Store
+.eggs/
+fini.egg-info/
+build/
+dist/
+fini/__pycache__/
+fini/fonts/__pycache__/
+fini/glossary/__pycache__/
+fini/managers/__pycache__/
+fini/providers/__pycache__/
+fini/util/__pycache__/
+fini/settingsBKP/__pycache__/
+

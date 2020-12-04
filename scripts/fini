@@ -1,0 +1,20 @@
+#!python
+import os, argparse
+import fini
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Extract financial information from publicly available sources")
+    parser.add_argument("--version", action="version", version='Fini Robot 0.1.0')
+    parser.add_argument("-v", "--verbose", action="store_true", default=False,
+        help="display verbose information during processing")
+
+    parser.add_argument('ticker_symbols', metavar='Ticker', type=str, nargs='*',
+                    help='Ticker symbol(s) to get information for')
+
+    # Parse user inputs
+    args = parser.parse_args()
+
+    if args.ticker_symbols:
+        fini.managers.provider.data_parser(args)
+    else:
+        fini.FiniApp().run()

@@ -1,0 +1,1 @@
+from .font_small_slant import small_slant
