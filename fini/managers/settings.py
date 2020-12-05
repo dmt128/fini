@@ -54,13 +54,13 @@ def convert_value_str_to_type(value):
     return value
 
 class settings_ctx:
-    def __init__(self, provider, settings_manager, debug=False):
-        self._provider = provider
+    def __init__(self, provider):
+        self._provider    = provider
         self._provider_id = provider.provider_id()
-        self._smng = settings_manager
-        self._settings  = {}
-        self._condition = {}
-        self._debug = debug
+        self._smng        = provider._smng
+        self._settings    = {}
+        self._condition   = {}
+        self._debug       = provider._debug
 
     def _create_color_setting_lambda(self, color_fmt):
         return lambda data: color_fmt
@@ -120,15 +120,14 @@ class settings_ctx:
         settings_path = self._create_full_key(key)
 
         # Add format setting to global settings manager
-        self._smng.add_setting(settings_path, value)
-
-        # Add set listener for this setting, if any
-        if set_callback:
-            self._smng.add_set_listener_for_setting(settings_path, set_callback, set_user_data)
-        
-        # Add get listener for this setting, if any
-        if get_callback:
-            self._smng.add_get_listener_for_setting(settings_path, get_callback, get_user_data)
+        self._smng.add_setting(
+            settings_path, 
+            value,
+            set_callback=set_callback, 
+            set_user_data=set_user_data,
+            get_callback=get_callback, 
+            get_user_data=get_user_data,
+            )
 
     def add_fmt_setting(
         self, 
@@ -146,7 +145,14 @@ class settings_ctx:
         new_value, ref_value = self._replace_ref_value(value)
         
         # Add format setting to global settings manager
-        self._smng.add_setting(settings_path, new_value)
+        self._smng.add_setting(
+            settings_path, 
+            new_value,
+            set_callback=set_callback, 
+            set_user_data=set_user_data, 
+            get_callback=get_callback, 
+            get_user_data=get_user_data
+        )
 
         # Add listener for this setting.
         # In 'add_fmt_setting' we always add the base class supplied update_draw_ctx as
@@ -156,14 +162,6 @@ class settings_ctx:
 
         if ref_value:
             self._smng.add_set_listener_for_setting(ref_value[1:-1], self._provider.update_draw_ctx, user_data=None)
-
-        # Add set listener for this setting, if any
-        if set_callback:
-            self._smng.add_set_listener_for_setting(settings_path, set_callback, set_user_data)
-        
-        # Add get listener for this setting, if any
-        if get_callback:
-            self._smng.add_get_listener_for_setting(settings_path, get_callback, get_user_data)
 
         # Evaluate the setting value and store in internal settings dictionary.
         evaluated_value = self._smng.get_setting(settings_path)
@@ -365,8 +363,10 @@ class SettingsManager:
             with open(base_config_abs_path, 'w') as fp:
                 json.dump(base_config, fp, sort_keys=False, indent=4)
         except:
-            raise Exception("There was a problem writing the base config file on disk. Cannot proceed.")
-
+            # raise Exception("There was a problem writing the base config file on disk. Cannot proceed.")
+            print("There was a problem writing the base config file on disk. Cannot proceed.")
+            return None
+            
         # We also copy any existing data from the old location to the new one.
         # This way the settings file will be found when the application runs next time.
         print("Copying data from '{}' to '{}' ".format(old_value, new_value))
@@ -376,6 +376,8 @@ class SettingsManager:
         # which will also update the manager's status to not dirty
         print("Saving new settings state...")
         smng.save_settings()
+
+        return new_value
 
 
     @staticmethod
@@ -666,16 +668,25 @@ class SettingsManager:
         else:
             return (value, False)
 
-    def get_setting(self, setting_path, eval_out=False):
-        current_value = util.misc.DictUtil.get_by_path(self._settings, setting_path)
-        if current_value is None:
+    def setting_exists(self, setting_path):
+        return util.misc.DictUtil.path_exists(self._settings, setting_path)
+        # value = util.misc.DictUtil.get_by_path(self._settings, setting_path)
+        # if value is None:
+        #     return False
+        # else:
+        #     return True
+
+    def get_setting(self, setting_path, eval_out=False, call_listener=True):
+        if not self.setting_exists(setting_path):
             if self._debug:
                 print("Setting '{}' does not exist".format(setting_path) )
             return None
 
+        current_value = util.misc.DictUtil.get_by_path(self._settings, setting_path)
+
         # Notify all get listeners. Call each listener with this object,
         # the setting's path, and the current value
-        if self._get_listeners.get(setting_path):
+        if self._get_listeners.get(setting_path) and call_listener:
             for listener in self._get_listeners[setting_path]:
                 listener_num_args = len(inspect.signature(listener['callback']).parameters)
                 if listener_num_args == 5:
@@ -699,84 +710,121 @@ class SettingsManager:
             return self._evaluate_setting(current_value)[0]
 
     def get_raw_setting(self, setting_path):
-        try:
-            value = util.misc.DictUtil.get_by_path(self._settings, setting_path)
-            return value
-        except:
-            print("Setting '{}' does not exist".format(setting_path) )
+        if self.setting_exists(setting_path):
+            return util.misc.DictUtil.get_by_path(self._settings, setting_path)
+        else:
+            if self._debug:
+                print("Setting '{}' does not exist".format(setting_path) )
             return None
 
-    def set_setting(self, setting_path, value):
-        if self.get_setting(setting_path) is None:
+    def set_setting(self, setting_path, value, call_listener=True):
+        if not self.setting_exists(setting_path):
             if self._debug:
-                print("'set_setting' ERROR: Could not find setting: {}".format(setting_path))
+                print("SETTINGS 'set_setting' ERROR: Setting '{}' does not exist".format(setting_path))
             return None
         
         # Make sure value is a string. If not, make it a string and hope for the best
+        # The reason we deal with strings only is that this part is meant to be driven
+        # by user input which comes in string format always
         if type(value) is not str:
             value = str(value)
         
         old_value, eval_setting = self.get_setting(setting_path, eval_out=True)
-        
-        if old_value is not None:
-            value = convert_value_str_to_type(value)
-            if type(old_value) is not type(value):
-                print("There is a value mismatch for setting '{}'. Was expecting value of type '{}' and got type '{}'".format(setting_path, type(old_value), type(value)) )
-                return None
-            if eval_setting:
-                eval_value = self._reformat_value(value)
-                # Try to evaluate the setting, see if it's correct
-                try:
-                    eval(eval_value[1:])
-                except:
-                    print("Setting '{}' is not valid!".format(value) )
-                    return None
-                if value[0] != "!":
-                    value = "!" + value
-            util.misc.DictUtil.set_by_path(self._settings, setting_path, value)
-        else:
+
+        if old_value is None:
+            return None
+
+        # Convert string value into its actual type
+        value = convert_value_str_to_type(value)
+        if type(old_value) is not type(value):
+            print("There is a value mismatch for setting '{}'. Was expecting value of type '{}' and got type '{}'".format(setting_path, type(old_value), type(value)) )
             return None
         
-        # Mark settings as dirty. Will need to ask user to save on exit.
-        # We mark it here and not at the end of this method, because a listener
-        # can potentially perform a save operation, which will mark the state not dirty.
-        if old_value != self._evaluate_setting(value)[0]:
-            self._dirty = True
+        # If this is referene value, try to evaluate it to see if it exists
+        if eval_setting:
+            eval_value = self._reformat_value(value)
+            # Try to evaluate the setting, see if it's correct
+            try:
+                eval(eval_value[1:])
+            except:
+                print("Setting '{}' is not valid!".format(value) )
+                return None
+            if value[0] != "!":
+                value = "!" + value
 
+        # util.misc.DictUtil.set_by_path(self._settings, setting_path, value)
+        
         # Notify all listeners. Call each listener with this object,
         # the setting's path, the new value and the old value
-        if self._set_listeners.get(setting_path):
+        # We call the listeners, before setting the actual value,
+        # since a listener might alter the value or reject it altogether
+        if self._set_listeners.get(setting_path) and call_listener:
+            processed_value = None
+            err_listener = []
+
             for listener in self._set_listeners[setting_path]:
                 if len(inspect.signature(listener['callback']).parameters) == 5:
-                    listener['callback'](self, setting_path, old_value, value, listener['user_data'])
+                    processed_value = listener['callback'](self, setting_path, old_value, value, listener['user_data'])
+                    if processed_value is None:
+                        err_listener.append(listener)
                 elif len(inspect.signature(listener).parameters) == 4:
-                    listener['callback'](self, setting_path, old_value, value)
+                    processed_value = listener['callback'](self, setting_path, old_value, value)
+                    if processed_value is None:
+                        err_listener.append(listener)
                 elif len(inspect.signature(listener).parameters) == 0:
-                    listener['callback']()
+                    processed_value = listener['callback']()
+                    if processed_value is None:
+                        err_listener.append(listener)
                 else:
                     raise Exception("Don't know how to call listener")
 
+            if processed_value is None:
+                if self._debug:
+                    print("A listener returned None: {}".format(err_listener))
+                return None
+
+            if processed_value != value:
+                value = processed_value
+
+        # Finally set the new value
+        util.misc.DictUtil.set_by_path(self._settings, setting_path, value)
+
+        # Mark settings as dirty. Will need to ask user to save on exit.
+        # We get the current value again here, because a listener
+        # can potentially have performed a save operation, which will mark the state not dirty.
+        current_value = self.get_setting(setting_path)
+        if current_value != self._evaluate_setting(value)[0]:
+            self._dirty = True
+
+        # Return the new value as indication of success
         return value
     
-    def add_setting(self, setting_path, value):
-        # First we need to check if the settign already exists.
-        try:
-            exists = util.misc.DictUtil.get_by_path(self._settings, setting_path)
-        except:
-            exists = None
-
-        if not exists:
+    def add_setting(
+        self, 
+        setting_path, 
+        value, 
+        set_callback=None,
+        set_user_data=None,
+        get_callback=None,
+        get_user_data=None
+        ):
+        
+        # Add a setting only if it does not already exist.
+        if not self.setting_exists(setting_path):
             util.misc.DictUtil.add_by_path(self._settings, setting_path, value)
             
             # Mark settings as dirty
             self._dirty = True
 
-            return value
-        else:
-            if self._debug:
-                print("Setting '{}' already exists!". format(setting_path))
+        # Add any listeners (setters/getters) if any.
+        # We add those even if the setting exists, because listeners are not saved
+        # during shutdown of the application.
+        if set_callback:
+            self.add_set_listener_for_setting(setting_path, set_callback, set_user_data)
+        
+        if get_callback:
+            self.add_get_listener_for_setting(setting_path, get_callback, get_user_data)
 
-            return None
 
     #================================================
     # Path related getter functions

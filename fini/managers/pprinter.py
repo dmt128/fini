@@ -82,11 +82,12 @@ class draw_ctx:
                 'pos_y': pos_y,
             }
 
-    def __init__(self, dims=(None,  None), debug=False):
+    def __init__(self, provider, dims=(None,  None)):
+        self._provider = provider
         self._width, self._height  = dims
         self._panels = {}
         self._views  = {}
-        self._debug  = debug
+        self._debug  = provider._debug
 
     def add_panel(self, panel_name, dims=(None, None), pos=(None, None)):
         if not self._panels.get(panel_name):

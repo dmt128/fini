@@ -32,7 +32,7 @@ class CacheManager:
             self._save_stock_data(abs_path, provider.stock_data_ref() )
     
     def save_stock_data_dict(self, provider, ticker_symbol):
-        for ticker_symbol in provider._data_dict.keys():
+        for ticker_symbol in provider._ticker_data.keys():
             dir_path, abs_path = self._get_stock_data_paths(provider, ticker_symbol)
 
             if os.path.exists(abs_path):

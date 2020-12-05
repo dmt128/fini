@@ -5,115 +5,12 @@ import re, webview
 __all__ = ['TradingViewProvider']
 __docformat__ = 'restructuredtext'
 
-# def on_closed():
-#     print('pywebview window is closed')
-
-
-# def on_closing():
-#     print('pywebview window is closing')
-
-
-# def on_shown():
-#     print('pywebview window shown')
-
-
-# def on_loaded():
-#     print('DOM is ready')
-
-#     # unsubscribe event listener
-#     webview.windows[0].loaded -= on_loaded
-
-
-# def load_window_html(q):
-#     while True:
-#         html_data = q.get()
-
-#         if html_data['quit']:
-#             break
-
-#         # Get data from html_data dictionary
-#         ticker              = html_data['ticker']
-#         watchlist           = html_data['watchlist']
-#         container_id        = html_data['container_id']
-#         autosize            = html_data['autosize']
-#         timezone            = html_data['timezone']
-#         theme               = html_data['theme']
-#         style               = html_data['style']
-#         locale              = html_data['locale']
-#         toolbar_bg          = html_data['toolbar_bg']
-#         enable_publishing   = html_data['enable_publishing']
-#         withdateranges      = html_data['withdateranges']
-#         rangeo              = html_data['range']
-#         hide_side_toolbar   = html_data['hide_side_toolbar']
-#         allow_symbol_change = html_data['allow_symbol_change']
-#         details             = html_data['details']
-#         hotlist             = html_data['hotlist']
-#         calendar            = html_data['calendar']
-#         studies             = html_data['studies']
-
-#         webview.windows[0].load_html( 
-#             get_stock_chart_html(
-#                 ticker,
-#                 watchlist=watchlist, 
-#                 container_id=container_id,
-#                 autosize=autosize,
-#                 timezone=timezone,
-#                 theme=theme,
-#                 style=style,
-#                 locale=locale,
-#                 toolbar_bg=toolbar_bg,
-#                 enable_publishing=enable_publishing,
-#                 withdateranges=withdateranges,
-#                 rangeo=rangeo,
-#                 hide_side_toolbar=hide_side_toolbar,
-#                 allow_symbol_change=allow_symbol_change,
-#                 details=details,
-#                 hotlist=hotlist,
-#                 calendar=calendar,
-#                 studies=studies,
-#             ) 
-#         )
-    
-#     webview.windows[0].destroy()
-
-
-# def create_stock_chart(q):
-#     window = webview.create_window('Stock Chart', html=get_stock_chart_html("AAPL"), frameless=True)
-#     window.closed  += on_closed
-#     window.closing += on_closing
-#     window.shown   += on_shown
-#     window.loaded  +=on_loaded
-#     webview.start(load_window_html, q)
-
 class TradingViewProvider(provider.ProviderBase):
     def __init__(self, *args, **kwargs):
         # We need to call the superclass __init__ here.
         # The superclass __init__ calls some initialisation code that is 
         # necessary for the correct operation of this class
         super(TradingViewProvider, self).__init__(*args, **kwargs)
-
-        # # studies=["CRSI@tv-basicstudies", "VolatilityIndex@tv-basicstudies"],
-        # self._html_data = {
-        #     'quit'               : False,
-        #     'ticker'             : "",
-        #     'watchlist'          : None,
-        #     'container_id'       : "tradingview_60e16",
-        #     'autosize'           : True,
-        #     'timezone'           : "Europe/London",
-        #     'theme'              : "light",
-        #     'style'              : 2,
-        #     'locale'             : "en",
-        #     'toolbar_bg'         : "f1f3f6",
-        #     'enable_publishing'  : False,
-        #     'withdateranges'     : True,
-        #     'range'              : "YTD",
-        #     'hide_side_toolbar'  : False,
-        #     'allow_symbol_change': True,
-        #     'details'            : True,
-        #     'hotlist'            : True,
-        #     'calendar'           : True,
-        #     'studies'            : None,
-        # }
 
     @staticmethod
     def provider_id():
@@ -248,6 +145,59 @@ class TradingViewProvider(provider.ProviderBase):
         dctx.view("main").add_panel("url", ["overview.pos_x", "overview.height"])
 
     @staticmethod
+    def generate_webview_ctx(wctx):
+        # Pre-calculate size and position of window_1
+        screen_width, screen_height = util.screen.size()
+        window_1_width  = 800
+        window_1_height = 500 
+        window_1_pos_x = screen_width - window_1_width
+        window_1_pos_y = 0
+
+        wctx.add_webview(
+            window_id="window_1",
+            window_title="Stock Chart", 
+            url=None,
+            html=None,
+            url_callback=None,
+            html_callback=TradingViewProvider.get_stock_chart_html,
+            js_api=None,
+            size=(window_1_width, window_1_height),
+            position=(window_1_pos_x, window_1_pos_y),
+            min_size=(200, 100),
+            resizable=True,
+            fullscreen=False,
+            hidden=False,
+            frameless=False,
+            easy_drag=True,
+            minimized=False,
+            on_top=False,
+            confirm_close=False,
+            background_color='#FFFFFF',
+            transparent=False, 
+            text_select=False,
+            debug=wctx._debug,
+        )
+
+        wctx.webview("window_1").add_html_data_setting("ticker", "AAPL")
+        wctx.webview("window_1").add_html_data_setting("watchlist", ["AAPL", "AMD"])
+        wctx.webview("window_1").add_html_data_setting("container_id", "tradingview_60e16")
+        wctx.webview("window_1").add_html_data_setting("autosize", True)
+        wctx.webview("window_1").add_html_data_setting("timezone", "Europe/London")
+        wctx.webview("window_1").add_html_data_setting("theme", "light")
+        wctx.webview("window_1").add_html_data_setting("style", 2)
+        wctx.webview("window_1").add_html_data_setting("locale", "en")
+        wctx.webview("window_1").add_html_data_setting("toolbar_bg", "f1f3f6")
+        wctx.webview("window_1").add_html_data_setting("enable_publishing", False)
+        wctx.webview("window_1").add_html_data_setting("withdateranges", True)
+        wctx.webview("window_1").add_html_data_setting("date_range", "YTD")
+        wctx.webview("window_1").add_html_data_setting("hide_side_toolbar", False)
+        wctx.webview("window_1").add_html_data_setting("allow_symbol_change", True)
+        wctx.webview("window_1").add_html_data_setting("details", True)
+        wctx.webview("window_1").add_html_data_setting("hotlist", True)
+        wctx.webview("window_1").add_html_data_setting("calendar", True)
+        wctx.webview("window_1").add_html_data_setting("studies", ["CRSI@tv-basicstudies", "VolatilityIndex@tv-basicstudies"])
+
+    @staticmethod
     def get_stock_chart_html(
         ticker="AAPL", 
         watchlist=["AAPL"], 
@@ -360,50 +310,9 @@ class TradingViewProvider(provider.ProviderBase):
         )
         return html
 
-    @staticmethod
-    def _update_data_setting(smng, setting_path, old_value, new_value, wctx):
-        pass
-    
-    @staticmethod
-    def _update_html_data_setting(smng, setting_path, old_value, new_value, wctx):
-        keys = setting_path.split(".")
-        wctx_key = ".".join( [keys[2], keys[3], keys[4]] )
-        util.misc.DictUtil.set_by_path(wctx._webviews, wctx_key, new_value)
-
-    @staticmethod
-    def generate_webview_ctx(wctx):
-        wctx.add_webview(
-            webview_id="window_1",
-            window_title="Stock Chart", 
-            html_callback=TradingViewProvider.get_stock_chart_html,
-            fullscreen=False,
-            frameless=False,
-            show=True,
-            debug=wctx._debug
-        )
-
-        wctx.webview("window_1").add_html_data_setting("ticker", "AAPL", set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("watchlist", ["AAPL", "AMD"], set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("container_id", "tradingview_60e16", set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("autosize", True, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("timezone", "Europe/London", set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("theme", "light", set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("style", 2, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("locale", "en", set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("toolbar_bg", "f1f3f6", set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("enable_publishing", False, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("withdateranges", True, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("date_range", "YTD", set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("hide_side_toolbar", False, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("allow_symbol_change", True, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("details", True, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("hotlist", True, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("calendar", True, set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-        wctx.webview("window_1").add_html_data_setting("studies", ["CRSI@tv-basicstudies", "VolatilityIndex@tv-basicstudies"], set_callback=TradingViewProvider._update_html_data_setting, set_user_data=wctx)
-
     def _webview_process_impl(self, wctx, ticker_list):
         wctx.webview("window_1").set_html_data_setting("ticker", ticker_list[0])
         wctx.webview("window_1").set_html_data_setting("watchlist", ticker_list)
 
     def data_parser_1(self, URL, data, data_ctx):
-        pass
+        return None

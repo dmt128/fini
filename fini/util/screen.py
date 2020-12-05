@@ -1,4 +1,5 @@
 import os, sys, colorama
+import tkinter as tk
 from colorama import Fore, Back, Style, Cursor
 from .time import get_datetime_now_as_string
 from .. import fonts
@@ -6,8 +7,8 @@ from .. import version
 
 __all__ = [
     'pos', 'Fore', 'Back', 'Style', 'Cursor', 'app_welcome_message',
-    'move_cursor', 'erase_screen', 'clear_screen', 'scroll_down',
-    'hide_cursor', 'show_cursor',
+    'screen_size' ,'move_cursor', 'erase_screen', 'clear_screen',
+    'scroll_down', 'hide_cursor', 'show_cursor',
 ]
 
 pos = lambda x, y: Cursor.POS(x, y)
@@ -25,6 +26,17 @@ def app_welcome_message():
     print(Style.RESET_ALL)
     print("Local time: {}".format(get_datetime_now_as_string()))
     print("")
+
+def size():
+    os.environ["TK_SILENCE_DEPRECATION"] = "1"
+    root   = tk.Tk()
+    width  = root.winfo_screenwidth()
+    height = root.winfo_screenheight()
+    os.environ["TK_SILENCE_DEPRECATION"] = "0"
+    return width, height
+
+def screen_size():
+    return size()
 
 def move_cursor(y):
     for yy in range(y):

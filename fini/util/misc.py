@@ -11,7 +11,7 @@ class DictUtil:
         if type(items) is str:
             return items.split(".")
         elif type(items) is not list:
-            raise Exception("'items' argument must be either a list of strings or a string path.")
+            raise Exception("DictUtil ERROR: 'items' argument must be either a list of strings or a string path.")
         return items
 
     #================================================
@@ -21,22 +21,37 @@ class DictUtil:
     @staticmethod
     def get_by_path(root, items, debug=False):
         """Access a nested object in root by item sequence."""
-        items = DictUtil._parse_items(items)
         try:
+            items = DictUtil._parse_items(items)
             return reduce(operator.getitem, items, root)
         except Exception as e:
             if debug:
                 print("get_by_path ERROR in {}: {}".format(".".join(items), e))
             return None
+    
+    @staticmethod
+    def path_exists(root, items):
+        try:
+            items = DictUtil._parse_items(items)
+            value = reduce(operator.getitem, items, root)
+            if value is None:
+                return False
+            else:
+                return True
+        except:
+            return False
 
     @staticmethod
     def set_by_path(root, items, value, debug=False):
         """Set a value in a nested object in root by item sequence."""
-        items = DictUtil._parse_items(items)
-        element = DictUtil.get_by_path(root, items[:-1])
-        if element and element.get(items[-1], None) is not None:
-            element[items[-1]] = value
-        else:
+        try:
+            items = DictUtil._parse_items(items)
+            element = DictUtil.get_by_path(root, items[:-1])
+            if element and element.get(items[-1], None) is not None:
+                element[items[-1]] = value
+            else:
+                raise Exception("Item '{}' does not exist. Add it with 'add_by_path' method first".format(".".join(items)))
+        except:
             raise Exception("Item '{}' does not exist. Add it with 'add_by_path' method first".format(".".join(items)))
 
     @staticmethod

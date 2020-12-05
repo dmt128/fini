@@ -38,3 +38,11 @@ def get_providers(path_to_external_providers=None):
             __providers__[provider[1].provider_id()] = provider
 
     return __providers__
+
+def test_managers(debug=True):
+    import fini
+    smng = fini.managers.SettingsManager(debug=debug)
+    smng.initial_setup()
+    cmng = fini.managers.CacheManager(settings_manager=smng, debug=debug)
+    wmng = fini.managers.WebviewManager(settings_manager=smng, debug=debug)
+    return smng, cmng, wmng

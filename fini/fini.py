@@ -80,7 +80,7 @@ class FiniApp():
 
                 # Parse user input
                 args = self._cmd_parser.parse_args(user_input.split())
-
+                
                 # #======================================
                 # # Ticker symbols
                 # #======================================
